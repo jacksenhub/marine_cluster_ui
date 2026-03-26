@@ -3,10 +3,10 @@ import json
 import math
 import random
 import os
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTextEdit, QGroupBox, QFormLayout, QLineEdit, QComboBox, QSplitter
-from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtCore import QTimer, Qt, QUrl
-from PyQt6.QtGui import QFont
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTextEdit, QGroupBox, QFormLayout, QLineEdit, QComboBox, QSplitter
+from PyQt5.QtWebEngineWidgets import QWebEngineView
+from PyQt5.QtCore import QTimer, Qt, QUrl
+from PyQt5.QtGui import QFont
 
 class FleetSimulationWindow(QMainWindow):
     def __init__(self):
