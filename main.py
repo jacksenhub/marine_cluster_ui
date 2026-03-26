@@ -186,19 +186,19 @@ class FleetSimulationWindow(QMainWindow):
             self.pool_length_input.setText(str(self.pool_config["length"]))
 
     def create_and_load_map_html(self):
-        # 核心修复：使用平面坐标系，完全适配米制局部坐标
-        html = f"""
+        # 核心修复：使用 .format() 代替 f-string，避免 JS 大括号与 Python 冲突
+        html = """
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8"/>
     <style>
-        body,html{{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#1a1a2e;}}
-        #map{{width:100%;height:100%;}}
-        #panel{{position:absolute;top:10px;right:10px;background:#0008;color:#fff;padding:8px 12px;border-radius:6px;font-size:12px;}}
-        #legend{{position:absolute;bottom:10px;right:10px;background:#fff;padding:8px;border-radius:6px;font-size:11px;}}
-        .leg{{display:flex;align-items:center;margin:3px 0;}}
-        .col{{width:10px;height:10px;border-radius:50%;margin-right:6px;}}
+        body,html {{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#1a1a2e;}}
+        #map {{width:100%;height:100%;}}
+        #panel {{position:absolute;top:10px;right:10px;background:#0008;color:#fff;padding:8px 12px;border-radius:6px;font-size:12px;}}
+        #legend {{position:absolute;bottom:10px;right:10px;background:#fff;padding:8px;border-radius:6px;font-size:11px;}}
+        .leg {{display:flex;align-items:center;margin:3px 0;}}
+        .col {{width:10px;height:10px;border-radius:50%;margin-right:6px;}}
     </style>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v7.3.0/ol.css">
     <script src="https://cdn.jsdelivr.net/npm/ol@v7.3.0/dist/ol.js"></script>
@@ -213,14 +213,18 @@ class FleetSimulationWindow(QMainWindow):
 </div>
 
 <script>
-    const W = {self.pool_config['width']};
-    const H = {self.pool_config['length']};
+    const W = {WIDTH};
+    const H = {LENGTH};
 
-    // 自定义平面投影（关键修复！）
-    const proj = new ol.proj.Projection({
+    // 自定义平面投影
+    const proj = new ol.proj.Projection({{
         code: 'POOL',
         units: 'm',
-    });
+        extent: [0, 0, W, H]
+    }});
+    
+    // 必须注册投影
+    ol.proj.addProjection(proj);
 
     const map = new ol.Map({{
         target: 'map',
@@ -237,9 +241,9 @@ class FleetSimulationWindow(QMainWindow):
             projection: proj,
             center: [W/2, H/2],
             zoom: 1.2,
-            minZoom: 1,
-            maxZoom: 5,
-            extent: [0,0,W,H]
+            minZoom: 0.5,
+            maxZoom: 10,
+            extent: [0, 0, W, H] // 限制视口不超出水池
         }})
     }});
 
@@ -256,7 +260,7 @@ class FleetSimulationWindow(QMainWindow):
     }})}}));
     map.addLayer(new ol.layer.Vector({{source:srcShip}}));
 
-    // 画水池
+    // 画水池边界
     srcPool.addFeature(new ol.Feature({{
         geometry: new ol.geom.Polygon([[[0,0],[W,0],[W,H],[0,H],[0,0]]])
     }}));
@@ -264,6 +268,7 @@ class FleetSimulationWindow(QMainWindow):
     let leader = null;
     let followers = [];
 
+    // 供 Python 调用的更新函数
     function updateMap(data) {{
         srcShip.clear();
         srcLine.clear();
@@ -313,7 +318,8 @@ class FleetSimulationWindow(QMainWindow):
 </script>
 </body>
 </html>
-        """
+        """.format(WIDTH=self.pool_config['width'], LENGTH=self.pool_config['length'])
+        
         self.map_view.setHtml(html, QUrl("file:///"))
 
     def update_map_view_js(self):
