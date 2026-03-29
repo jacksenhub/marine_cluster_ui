@@ -46,11 +46,15 @@ class FleetSimulationWindow(QMainWindow):
 
         self.sim_timer = QTimer()
         self.sim_timer.timeout.connect(self.update_simulation_loop)
-        self.sim_timer.start(self.update_interval)
+        # 不在初始化时立即启动，等待页面加载完成
+        # self.sim_timer.start(self.update_interval)
 
         self.statusBar = QStatusBar()
         self.setStatusBar(self.statusBar)
-        self.statusBar.showMessage("就绪 - 仿真运行中")
+        self.statusBar.showMessage("就绪 - 等待地图加载")
+        
+        # 页面加载状态
+        self.map_loaded = False
 
     def init_ui(self):
         central_widget = QWidget()
@@ -147,6 +151,8 @@ class FleetSimulationWindow(QMainWindow):
 
         # 地图
         self.map_view = QWebEngineView()
+        # 连接页面加载完成信号
+        self.map_view.loadFinished.connect(self.on_map_loaded)
         self.create_and_load_map_html()
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -322,13 +328,35 @@ class FleetSimulationWindow(QMainWindow):
         
         self.map_view.setHtml(html, QUrl("file:///"))
 
+    def on_map_loaded(self, success):
+        if success:
+            self.map_loaded = True
+            self.log_message("✅ 地图页面加载完成")
+            self.statusBar.showMessage("就绪 - 仿真运行中")
+            # 页面加载完成后启动定时器
+            if not self.sim_timer.isActive():
+                self.sim_timer.start(self.update_interval)
+        else:
+            self.map_loaded = False
+            self.log_message("❌ 地图页面加载失败")
+            self.statusBar.showMessage("地图加载失败")
+
     def update_map_view_js(self):
+        # 只在页面加载完成后更新
+        if not self.map_loaded:
+            return
+            
         data = {
             "leader": self.fleet_data["leader"],
             "followers": self.fleet_data["followers"],
             "trajectories": self.trajectories
         }
-        js = f"updateMap({json.dumps(data)});"
+        # 修复：检查updateMap函数是否已定义
+        js = f"""
+        if (typeof updateMap !== 'undefined') {{
+            updateMap({json.dumps(data)});
+        }}
+        """
         self.map_view.page().runJavaScript(js)
 
     def update_simulation_loop(self):
